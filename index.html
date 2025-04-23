@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSN Messenger Chat Viewer</title>
+    <style>
+        /* --- Base & Layout --- */
+        :root {
+            --primary-color: #0b93f6;
+            --secondary-color: #e5e5ea;
+            --background-light: #f5f5f5;
+            --background-medium: #f0f0f0;
+            --background-medium-light: #f8f8f8;
+            --background-dark: #e8e8e8;
+            --border-color: #ddd;
+            --text-color-dark: #333;
+            --text-color-medium: #555;
+            --text-color-light: #888;
+            --text-color-white: #ffffff;
+            --link-color: #007fff;
+            --container-max-width: 1200px;
+            --sidebar-width: 300px;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-light);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .container {
+            display: none; /* Hidden initially */
+            flex-direction: row;
+            height: 100vh;
+            width: 100%;
+            max-width: var(--container-max-width);
+            margin: 0 auto;
+            background-color: var(--text-color-white);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        #messagesContentWrapper {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex; /* Needed for align-self on messages */
+            flex-direction: column;
+        }
+        #messagesContent {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            border-right: 1px solid var(--border-color);
+            background-color: var(--background-medium);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* --- Chat List (Sidebar) --- */
+        .chat-list-section {
+            padding: 12px 15px 10px 15px;
+            background-color: var(--background-dark);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        .chat-list-section h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.95em;
+            color: var(--text-color-dark);
+        }
+        #chatListContainer {
+            flex-grow: 1;
+            overflow-y: auto;
+            background-color: var(--background-medium-light);
+            border-bottom: 2px solid #ccc; /* Slightly heavier border */
+            padding-bottom: 10px; /* Ensure space below last item */
+        }
+        #chatList {
+            /* Placeholder for items */
+        }
+        .chat-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #e0e0e0; /* Lighter border for items */
+            font-size: 0.9em;
+            word-break: break-all;
+            transition: background-color 0.15s;
+            background-color: var(--background-medium-light);
+            color: var(--text-color-dark);
+        }
+        .chat-item:hover {
+            background-color: #e9e9e9;
+        }
+        .chat-item.selected {
+            background-color: #d0e0f0;
+            font-weight: bold;
+            color: var(--text-color-dark);
+        }
+
+        /* --- Identity Section (Sidebar) --- */
+        .identity-section {
+            padding: 10px 15px;
+            background-color: var(--background-dark);
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .identity-section h5 {
+            margin: 0 0 4px 0;
+            font-size: 0.9em;
+            color: var(--text-color-dark);
+        }
+        .identity-section small {
+            font-size: 0.8em;
+            color: var(--text-color-medium);
+            display: block;
+            margin-bottom: 8px;
+        }
+        #identityListContainer {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 5px 15px 10px 15px;
+            background-color: var(--background-medium-light);
+        }
+        .identity-item {
+            margin-bottom: 5px;
+            padding: 3px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            word-break: break-all;
+            font-size: 0.85em;
+        }
+        .identity-item span {
+            margin-right: 10px;
+            flex-grow: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-color-dark);
+        }
+        .identity-item button {
+            padding: 2px 6px;
+            font-size: 0.8em;
+            cursor: pointer;
+            margin-left: auto;
+            flex-shrink: 0;
+            border: 1px solid #bbb;
+            background-color: #fdfdfd;
+            border-radius: 3px;
+            transition: background-color 0.15s, border-color 0.15s;
+        }
+        .identity-item button:hover {
+            background-color: #f0f0f0;
+            border-color: #aaa;
+        }
+        .identity-item button.is-me {
+            background-color: var(--primary-color);
+            color: var(--text-color-white);
+            border-color: var(--primary-color);
+            font-weight: bold;
+        }
+        .identity-item button.is-me:hover {
+            background-color: #0a7fdb; /* Slightly darker blue on hover */
+            border-color: #0a7fdb;
+        }
+        #meInfo {
+            margin-top: 0;
+            font-size: 0.85em;
+            padding: 10px 15px;
+            flex-shrink: 0;
+            background-color: var(--background-dark);
+            border-top: 1px solid var(--border-color);
+            /* Default state */
+            font-style: italic;
+            font-weight: normal;
+            color: var(--text-color-medium);
+            line-height: 1.3;
+        }
+        #meInfo.has-identity { /* Style when identities are set */
+            font-style: normal;
+            font-weight: bold;
+            color: var(--text-color-dark);
+        }
+
+        /* --- Messages --- */
+        .session-separator {
+            border: 0;
+            height: 1px;
+            background-color: #ccc;
+            margin: 25px 5%; /* Use percentage for responsiveness */
+            width: 90%;
+            align-self: center;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 18px;
+            max-width: 75%;
+            word-wrap: break-word;
+            background-color: var(--secondary-color);
+            align-self: flex-start;
+            border: 1px solid #ddd; /* Slightly lighter border */
+            position: relative;
+            color: var(--text-color-dark);
+        }
+        .message.me {
+            background-color: var(--primary-color);
+            color: var(--text-color-white);
+            align-self: flex-end;
+            border-color: var(--primary-color);
+        }
+        .message-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 5px 10px; /* Spacing between sender/time */
+            margin-bottom: 5px;
+            font-size: 0.75em;
+            color: var(--text-color-medium);
+            line-height: 1.2;
+        }
+        .message.me .message-header {
+            color: #f0f0f0; /* Lighter grey for time on 'me' messages */
+            justify-content: flex-end;
+        }
+        .message-sender {
+            font-weight: bold;
+            color: var(--text-color-dark);
+            flex-shrink: 0; /* Prevent sender name shrinking */
+            word-break: break-all;
+        }
+        .message.me .message-sender {
+            display: none; /* Hide sender name for 'me' */
+        }
+        .message-time {
+            color: var(--text-color-light);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .message.me .message-time {
+            color: #e0e0e0; /* Even lighter grey for time on 'me' messages */
+        }
+        .message-content {
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+        .message-content a { /* Links in other messages */
+            color: var(--link-color);
+            text-decoration: underline;
+            word-break: break-all;
+        }
+        /* --- Style overrides for 'me' messages --- */
+        .message.me .message-content { /* Ensure base text is white */
+            color: var(--text-color-white);
+        }
+        .message.me .message-content > span[style*="color"] { /* Override inline color styles */
+             color: var(--text-color-white) !important;
+        }
+        .message.me .message-content a,
+        .message.me .message-content a:link,
+        .message.me .message-content a:visited { /* Make links white */
+            color: var(--text-color-white) !important;
+            text-decoration: underline;
+        }
+        .message.me .message-content *[style*="color"] { /* Catch-all for other potential inline colors */
+             color: var(--text-color-white) !important;
+        }
+
+        /* --- Status / Placeholder Messages --- */
+        .status-message {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: var(--text-color-medium);
+            width: 100%;
+            margin: auto;
+        }
+
+        /* --- File Input & Overlay --- */
+        .file-input-container {
+            display: block; /* Visible initially */
+            text-align: center;
+            padding: 30px;
+            border: 2px dashed var(--border-color);
+            margin: 30px auto;
+            max-width: 600px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .file-input-container h2 {
+            margin: 0 0 10px 0;
+            color: var(--text-color-dark);
+        }
+        .file-input-container p {
+            margin-bottom: 15px;
+            color: var(--text-color-medium);
+            line-height: 1.4;
+        }
+        .file-input-container label { /* Style the label like a button */
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff; /* Bootstrap blue */
+            color: var(--text-color-white);
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .file-input-container label:hover {
+            background-color: #0056b3; /* Darker blue */
+        }
+        .file-input-container input[type="file"] { /* Hide default input */
+            display: none;
+        }
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: none; /* Hidden initially */
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            color: var(--text-color-dark);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- File Input Area -->
+    <div class="file-input-container" id="fileInputDiv">
+        <h2>MSN Messenger Chat Viewer</h2>
+        <p>Select one or more MSN Messenger log files (.xml).<br>Use Ctrl+Click or Shift+Click to select multiple files.</p>
+        <label for="fileInput">Select Log File(s)</label>
+        <input type="file" id="fileInput" accept=".xml, text/xml" multiple>
+        <p><small>Files are processed locally in your browser. No data is uploaded.</small></p>
+    </div>
+
+    <!-- Main Chat View Area -->
+    <div class="container" id="mainContainer">
+        <div class="sidebar">
+            <!-- Conversation List -->
+            <div class="chat-list-section">
+                <h4>Conversations</h4>
+            </div>
+            <div id="chatListContainer">
+                <div id="chatList">Select file(s) to see chats.</div>
+            </div>
+
+            <!-- Identity Selector -->
+            <div class="identity-section">
+                <h5>Identify Yourself</h5>
+                 <small>(Display names in this chat)</small>
+            </div>
+            <div id="identityListContainer">
+                 <div id="identityList">Load files and select a chat.</div>
+            </div>
+            <p id="meInfo">Click 'Set as Me' next to your name(s) to mark your messages.</p>
+        </div>
+        <div class="content">
+            <div id="messagesContentWrapper">
+                <div id="messagesContent">
+                     <div class="status-message">Load file(s) and select a conversation</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Indicator -->
+    <div class="processing-overlay" id="processingOverlay">
+        Processing files...
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        /** @constant {string} Placeholder for unknown names or filenames */
+        const UNKNOWN_VALUE = 'Unknown';
+        /** @constant {string} CSS class for selected chat items */
+        const SELECTED_CLASS = 'selected';
+        /** @constant {string} CSS class for buttons indicating 'Me' */
+        const IS_ME_CLASS = 'is-me';
+        /** @constant {string} CSS class for the info paragraph when identities are set */
+        const HAS_IDENTITY_CLASS = 'has-identity';
+
+        // --- Global State ---
+        /** @type {Set<string>} All unique FriendlyNames found in messages */
+        let participants = new Set();
+        /** @type {Set<string>} Unique chat partner names derived from filenames */
+        let chatPartners = new Set();
+        /** @type {Set<string>} Stores FriendlyNames identified as the current user ("Me") */
+        let myFriendlyNames = new Set();
+        /** @type {Array<object>} Holds all parsed message objects */
+        let allMessages = [];
+        /** @type {string|null} The currently selected chat partner key (filename-derived name) */
+        let selectedChatPartner = null;
+
+        // --- DOM Element References ---
+        const fileInput = document.getElementById('fileInput');
+        const mainContainer = document.getElementById('mainContainer');
+        const fileInputDiv = document.getElementById('fileInputDiv');
+        const chatListElement = document.getElementById('chatList');
+        const identityListElement = document.getElementById('identityList');
+        const meInfoElement = document.getElementById('meInfo');
+        const messagesContentWrapper = document.getElementById('messagesContentWrapper');
+        const messagesContentElement = document.getElementById('messagesContent');
+        const processingOverlay = document.getElementById('processingOverlay');
+
+        // --- Event Listeners ---
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // --- Core Functions ---
+
+        /**
+         * Handles the file input change event. Reads selected XML files,
+         * parses them, and updates the UI.
+         * @param {Event} event - The file input change event object.
+         */
+        async function handleFileSelect(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) {
+                return;
+            }
+
+            resetIntermediateState();
+            processingOverlay.style.display = 'flex';
+
+            const filePromises = [];
+            let skippedFiles = [];
+            let errorFiles = [];
+            let validFilesFound = false;
+
+            for (const file of files) {
+                if (!file.name.toLowerCase().endsWith('.xml')) {
+                    skippedFiles.push(file.name);
+                    continue;
+                }
+                validFilesFound = true;
+
+                const promise = readFileAsText(file);
+                filePromises.push(promise);
+            }
+
+            // Process all files concurrently
+            const results = await Promise.allSettled(filePromises);
+            processingOverlay.style.display = 'none';
+
+            let successCount = 0;
+            let filesWithMessages = 0;
+
+            // Collate results and parse XML
+            results.forEach(result => {
+                if (result.status === 'fulfilled') {
+                    const fileData = result.value;
+                    try {
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(fileData.content, "text/xml");
+
+                        const parseError = xmlDoc.querySelector("parsererror");
+                        if (parseError) {
+                            throw new Error(`XML Parse Error: ${parseError.textContent.slice(0, 100)}`);
+                        }
+                        if (!xmlDoc.querySelector("Log")) {
+                            throw new Error("Missing <Log> element.");
+                        }
+
+                        const messagesAdded = extractDataFromXmlDoc(xmlDoc, fileData.fileName);
+                        successCount++;
+                        if (messagesAdded > 0) {
+                            filesWithMessages++;
+                        }
+                    } catch (error) {
+                        console.error(`Error processing ${fileData.fileName}:`, error);
+                        errorFiles.push({ name: fileData.fileName, msg: error.message });
+                    }
+                } else {
+                    // File reading itself failed (unlikely with FileReader unless aborted)
+                    console.error(`Failed to read a file: ${result.reason}`);
+                    // Attempt to find filename if possible, might not be available in `reason`
+                    errorFiles.push({ name: result.reason?.fileName || UNKNOWN_VALUE, msg: `File read error: ${result.reason?.message || result.reason}` });
+                }
+            });
+
+            reportProcessingSummary(successCount, filesWithMessages, skippedFiles, errorFiles);
+            updateUIAfterProcessing(successCount, validFilesFound, errorFiles.length, skippedFiles.length);
+        }
+
+        /**
+         * Reads a single file as text using FileReader.
+         * @param {File} file - The file object to read.
+         * @returns {Promise<{fileName: string, content: string}>} A promise resolving with filename and content.
+         */
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve({ fileName: file.name, content: e.target.result });
+                reader.onerror = (e) => reject({ fileName: file.name, message: `FileReader error: ${reader.error || e}` });
+                reader.readAsText(file);
+            });
+        }
+
+        /**
+         * Logs processing summary and shows an alert if there were issues.
+         * @param {number} successCount - Number of files processed successfully.
+         * @param {number} filesWithMessages - Number of files where messages were found.
+         * @param {Array<string>} skippedFiles - List of skipped non-XML filenames.
+         * @param {Array<{name: string, msg: string}>} errorFiles - List of files with processing errors.
+         */
+        function reportProcessingSummary(successCount, filesWithMessages, skippedFiles, errorFiles) {
+            console.log(`Successfully processed ${successCount} XML file(s). Found messages in ${filesWithMessages} file(s).`);
+
+            let alertMessage = '';
+            if (skippedFiles.length > 0) {
+                alertMessage += `Skipped ${skippedFiles.length} non-XML file(s). `;
+                console.log("Skipped non-XML files:", skippedFiles);
+            }
+            if (errorFiles.length > 0) {
+                alertMessage += `Encountered errors processing ${errorFiles.length} XML file(s). Check console for details.`;
+                console.warn("Errors during processing:", errorFiles);
+            }
+
+            if (alertMessage) {
+                alert(alertMessage.trim());
+            }
+        }
+
+        /**
+         * Updates the main UI elements based on the outcome of file processing.
+         * @param {number} successCount - Number of successfully processed files.
+         * @param {boolean} validFilesFound - Whether any XML files were attempted.
+         * @param {number} errorCount - Number of files that failed processing.
+         * @param {number} skippedCount - Number of non-XML files skipped.
+         */
+        function updateUIAfterProcessing(successCount, validFilesFound, errorCount, skippedCount) {
+             if (allMessages.length > 0) {
+                 allMessages.sort((a, b) => a.dateObj - b.dateObj); // Sort all messages chronologically
+                 displayChatList();
+                 showViewerUI();
+                 // Automatically select the first chat if available
+                 if (chatPartners.size > 0) {
+                     const firstPartner = Array.from(chatPartners).sort((a, b) => a.localeCompare(b))[0];
+                     selectChat(firstPartner, true); // Select first chat without console log spam
+                 } else {
+                     // Should only happen if files had <Log> but no <Message> with valid partner names
+                     displayIdentitySelector();
+                     displayMessages(); // Will likely show the "Select a conversation" prompt
+                 }
+             } else if (successCount > 0) {
+                 // Processed XML files but found no <Message> tags
+                 showViewerUI();
+                 chatListElement.innerHTML = 'No conversations found in the processed file(s).';
+                 identityListElement.innerHTML = 'No participants found.';
+                 messagesContentElement.innerHTML = `<div class="status-message">No messages found in the processed XML file(s).</div>`;
+             } else if (validFilesFound && errorCount > 0) {
+                  // Tried to process XML, but all failed
+                 showViewerUI();
+                  chatListElement.innerHTML = 'Processing failed.';
+                  identityListElement.innerHTML = 'Processing failed.';
+                  messagesContentElement.innerHTML = `<div class="status-message">Could not process any valid XML log files. Check console for errors.</div>`;
+             } else if (!validFilesFound && skippedCount > 0) {
+                 // Only non-XML files were selected
+                 resetViewer(); // Go back to file input
+             } else {
+                  // No files selected or other edge case
+                  resetViewer();
+             }
+        }
+
+        /**
+         * Extracts message data from a parsed XML Document.
+         * @param {XMLDocument} xmlDoc - The parsed XML document.
+         * @param {string} sourceFileName - The name of the file the XML came from.
+         * @returns {number} The number of messages successfully extracted.
+         */
+        function extractDataFromXmlDoc(xmlDoc, sourceFileName) {
+            const messageNodes = xmlDoc.querySelectorAll("Log > Message");
+            if (!messageNodes || messageNodes.length === 0) {
+                return 0; // No messages found
+            }
+
+            const chatPartnerFromFile = extractPartnerFromFilename(sourceFileName);
+            if (chatPartnerFromFile !== UNKNOWN_VALUE) {
+                chatPartners.add(chatPartnerFromFile);
+            }
+
+            let messagesAddedCount = 0;
+            messageNodes.forEach((msgNode) => {
+                try {
+                    const fromUser = msgNode.querySelector("From > User");
+                    const friendlyName = fromUser ? fromUser.getAttribute("FriendlyName") : UNKNOWN_VALUE;
+                    const sessionId = msgNode.getAttribute("SessionID");
+                    const dateTime = msgNode.getAttribute("DateTime");
+                    const textElement = msgNode.querySelector("Text");
+                    const rawText = textElement ? textElement.textContent : '';
+                    const styleAttribute = textElement ? textElement.getAttribute("Style") : '';
+
+                    if (!dateTime) {
+                        // console.warn(`Skipping message in ${sourceFileName} due to missing DateTime`, msgNode);
+                        return; // Skip messages without DateTime
+                    }
+                    const dateObj = new Date(dateTime);
+                    if (isNaN(dateObj.getTime())) {
+                        // console.warn(`Skipping message in ${sourceFileName} due to invalid DateTime: ${dateTime}`, msgNode);
+                        return; // Skip messages with invalid DateTime
+                    }
+
+                    if (friendlyName && friendlyName !== UNKNOWN_VALUE) {
+                        participants.add(friendlyName); // Add to the global list of all names found
+                    }
+
+                    allMessages.push({
+                        friendlyName,
+                        sessionId,
+                        dateTime, // Keep original string for reference if needed
+                        rawText,
+                        styleAttribute,
+                        dateObj, // Parsed Date object for sorting/display
+                        sourceFileName,
+                        chatPartnerFromFile // Store the derived partner name with each message
+                    });
+                    messagesAddedCount++;
+                } catch (e) {
+                    console.error(`Error parsing a message node in ${sourceFileName}:`, e, msgNode);
+                }
+            });
+            return messagesAddedCount;
+        }
+
+        /**
+         * Renders the list of conversations (derived from filenames) in the sidebar.
+         */
+        function displayChatList() {
+            chatListElement.innerHTML = ''; // Clear previous list
+
+            if (chatPartners.size === 0) {
+                chatListElement.innerHTML = '<div class="status-message">No conversations found.</div>';
+                return;
+            }
+
+            const sortedPartners = Array.from(chatPartners).sort((a, b) => a.localeCompare(b));
+
+            sortedPartners.forEach(partnerName => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'chat-item';
+                itemDiv.textContent = partnerName;
+                itemDiv.title = `View chat with ${partnerName}`;
+                itemDiv.dataset.partner = partnerName; // Store partner name for selection logic
+                itemDiv.onclick = () => selectChat(partnerName);
+                chatListElement.appendChild(itemDiv);
+            });
+
+            updateChatListSelection(); // Highlight the currently selected chat (if any)
+        }
+
+        /**
+         * Renders the list of unique participant names for the current chat
+         * in the identity selector section of the sidebar.
+         */
+        function displayIdentitySelector() {
+            identityListElement.innerHTML = ''; // Clear previous list
+            let relevantParticipants = new Set();
+
+            if (selectedChatPartner) {
+                // Filter messages by the selected chat partner derived from filename
+                allMessages.forEach(msg => {
+                    if (msg.chatPartnerFromFile === selectedChatPartner && msg.friendlyName && msg.friendlyName !== UNKNOWN_VALUE) {
+                        relevantParticipants.add(msg.friendlyName);
+                    }
+                });
+            } else {
+                // No chat selected, show prompt
+                identityListElement.innerHTML = '<div class="status-message">Select a conversation to see names.</div>';
+                updateMeButtons(); // Clear any previous button states
+                return;
+            }
+
+
+            if (relevantParticipants.size === 0) {
+                identityListElement.innerHTML = `<div class="status-message">No display names found in chat with ${escapeHtml(selectedChatPartner)}.</div>`;
+                updateMeButtons(); // Clear button states
+                return;
+            }
+
+            // Sort names alphabetically
+            const sortedParticipants = Array.from(relevantParticipants).sort((a, b) => a.localeCompare(b));
+
+            sortedParticipants.forEach(name => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'identity-item';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = name;
+                nameSpan.title = name; // Tooltip for long names
+                itemDiv.appendChild(nameSpan);
+
+                const button = document.createElement('button');
+                // Button text and click handler will be set by updateMeButtons
+                itemDiv.appendChild(button);
+
+                identityListElement.appendChild(itemDiv);
+            });
+
+            updateMeButtons(); // Set initial button states ('Set as Me'/'Unset Me') and handlers
+        }
+
+        /**
+         * Handles the selection of a chat from the sidebar list.
+         * @param {string} partnerKey - The partner name (derived from filename) to select.
+         * @param {boolean} [suppressLog=false] - If true, suppress console logging for this selection.
+         */
+        function selectChat(partnerKey, suppressLog = false) {
+             if (selectedChatPartner === partnerKey) {
+                 return; // No change if clicking the already selected chat
+             }
+             if (!suppressLog) {
+                console.log(`Selecting chat: ${partnerKey}`);
+             }
+             selectedChatPartner = partnerKey;
+             updateChatListSelection(); // Update highlight in the sidebar
+             displayIdentitySelector(); // Update the list of names for 'Set as Me'
+             displayMessages(); // Display messages for the selected chat
+         }
+
+        /**
+         * Updates the visual selection highlight (CSS class) in the chat list.
+         */
+        function updateChatListSelection() {
+            chatListElement.querySelectorAll('.chat-item').forEach(item => {
+                if (item.dataset.partner === selectedChatPartner) {
+                    item.classList.add(SELECTED_CLASS);
+                } else {
+                    item.classList.remove(SELECTED_CLASS);
+                }
+            });
+        }
+
+        /**
+         * Adds a FriendlyName to the set of names identified as "Me".
+         * Updates UI elements accordingly.
+         * @param {string} friendlyName - The name to identify as "Me".
+         */
+        function addMeIdentity(friendlyName) {
+            myFriendlyNames.add(friendlyName);
+            console.log(`Added "${friendlyName}" to 'Me' identities. Current set:`, Array.from(myFriendlyNames));
+            updateMeInfoText(); // Update the info paragraph
+            updateMeButtons(); // Update buttons in the identity list
+            displayMessages(); // Re-render messages with the new 'Me' identity
+        }
+
+        /**
+         * Removes a FriendlyName from the set of names identified as "Me".
+         * Updates UI elements accordingly.
+         * @param {string} friendlyName - The name to remove from the "Me" set.
+         */
+        function removeMeIdentity(friendlyName) {
+            myFriendlyNames.delete(friendlyName); // Remove from Set
+            console.log(`Removed "${friendlyName}" from 'Me' identities. Current set:`, Array.from(myFriendlyNames));
+            updateMeInfoText(); // Update the info paragraph
+            updateMeButtons(); // Update buttons in the identity list
+            displayMessages(); // Re-render messages
+        }
+
+        /**
+         * Updates the text and style of the #meInfo paragraph based on the
+         * current state of the myFriendlyNames set.
+         */
+        function updateMeInfoText() {
+            if (myFriendlyNames.size === 0) {
+                 meInfoElement.textContent = "Click 'Set as Me' next to your name(s) to mark your messages.";
+                 meInfoElement.classList.remove(HAS_IDENTITY_CLASS); // Use default italic style
+            } else if (myFriendlyNames.size === 1) {
+                 const [theName] = myFriendlyNames; // Get the single name from the Set
+                 meInfoElement.textContent = `You are identified as: ${escapeHtml(theName)}`;
+                 meInfoElement.classList.add(HAS_IDENTITY_CLASS); // Use bold style
+            } else {
+                 meInfoElement.textContent = `You are identified by ${myFriendlyNames.size} names. (Click 'Unset Me' to remove)`;
+                 meInfoElement.classList.add(HAS_IDENTITY_CLASS); // Use bold style
+            }
+        }
+
+        /**
+         * Updates the appearance (text, style) and click handlers of the
+         * "Set as Me" / "Unset Me" buttons in the identity list.
+         */
+        function updateMeButtons() {
+            identityListElement.querySelectorAll('.identity-item button').forEach(button => {
+                const nameSpan = button.closest('.identity-item')?.querySelector('span');
+                if (!nameSpan) {
+                    return; // Should not happen, but safety check
+                }
+                const participantName = nameSpan.textContent;
+
+                // Clear previous listener to prevent potential duplicates if re-rendered quickly
+                button.onclick = null;
+
+                if (myFriendlyNames.has(participantName)) {
+                    // This name IS currently marked as "Me"
+                    button.classList.add(IS_ME_CLASS);
+                    button.textContent = 'Unset Me'; // Change text
+                    button.onclick = (event) => { // Set click handler to REMOVE
+                        event.stopPropagation(); // Prevent chat selection if clicking button background
+                        removeMeIdentity(participantName);
+                    };
+                    button.disabled = false; // Ensure it's clickable
+                } else {
+                    // This name IS NOT currently marked as "Me"
+                    button.classList.remove(IS_ME_CLASS);
+                    button.textContent = 'Set as Me';
+                    button.onclick = (event) => { // Set click handler to ADD
+                         event.stopPropagation();
+                         addMeIdentity(participantName);
+                    };
+                    button.disabled = false; // Ensure it's clickable
+                }
+            });
+        }
+
+        /**
+         * Renders the messages for the currently selected chat partner
+         * into the main content area.
+         */
+        function displayMessages() {
+            messagesContentElement.innerHTML = ''; // Clear previous messages
+
+            if (!selectedChatPartner) {
+                messagesContentElement.innerHTML = '<div class="status-message">Select a conversation from the list on the left.</div>';
+                return;
+            }
+
+            // Filter messages for the selected chat partner
+            const messagesToDisplay = allMessages.filter(msg => msg.chatPartnerFromFile === selectedChatPartner);
+
+            if (!messagesToDisplay || messagesToDisplay.length === 0) {
+                messagesContentElement.innerHTML = `<div class="status-message">No messages found for the chat with ${escapeHtml(selectedChatPartner)}.</div>`;
+                return;
+            }
+
+            let htmlBuffer = '';
+            let lastSessionId = null;
+            let firstBlock = true; // To avoid separator before the very first message
+
+            messagesToDisplay.forEach(msgData => {
+                const currentSessionId = msgData.sessionId ?? UNKNOWN_VALUE;
+
+                // Add a separator if the SessionID changes within the same chat file
+                let showSeparator = false;
+                if (!firstBlock && currentSessionId !== lastSessionId) {
+                      showSeparator = true;
+                }
+
+                if (showSeparator) {
+                    htmlBuffer += `<hr class="session-separator">`;
+                }
+
+                lastSessionId = currentSessionId;
+                firstBlock = false;
+
+                // Format the message time
+                const time = msgData.dateObj.toLocaleString();
+                // Determine if the message sender is identified as 'Me'
+                const isMe = myFriendlyNames.has(msgData.friendlyName);
+                const messageClass = isMe ? 'message me' : 'message';
+                const senderDisplay = escapeHtml(msgData.friendlyName || UNKNOWN_VALUE);
+
+                // Parse inline styles (basic safety checks included)
+                const inlineStyle = parseStyleAttribute(msgData.styleAttribute);
+                // Linkify URLs and escape HTML in message text
+                const contentHtml = `<span style="${inlineStyle}">${linkify(escapeHtml(msgData.rawText || '')) || '[Empty Message]'}</span>`;
+
+                // Construct message HTML
+                htmlBuffer += `
+                    <div class="${messageClass}" title="Source: ${escapeHtml(msgData.sourceFileName || 'N/A')} | Session: ${escapeHtml(currentSessionId)}">
+                        <div class="message-header">
+                            ${!isMe ? `<span class="message-sender">${senderDisplay}</span>` : ''}
+                            <span class="message-time">${time}</span>
+                        </div>
+                        <div class="message-content">${contentHtml}</div>
+                    </div>`;
+            });
+
+            messagesContentElement.innerHTML = htmlBuffer;
+
+            // Scroll to the bottom after rendering messages
+            // Use requestAnimationFrame to ensure layout is complete before scrolling
+            requestAnimationFrame(() => {
+                messagesContentWrapper.scrollTop = messagesContentWrapper.scrollHeight;
+            });
+        }
+
+        // --- UI Control Functions ---
+
+        /** Shows the main viewer UI and hides the file input area. */
+        function showViewerUI() {
+            fileInputDiv.style.display = 'none';
+            // Adjust body alignment for the viewer layout
+            document.body.style.justifyContent = 'flex-start'; // Align container to left
+            document.body.style.alignItems = 'flex-start'; // Align container to top
+            mainContainer.style.display = 'flex'; // Show the main chat container
+        }
+
+        /** Hides the main viewer UI and shows the file input area. */
+        function showFileInputUI() {
+            fileInputDiv.style.display = 'block'; // Show file input
+            mainContainer.style.display = 'none'; // Hide main chat container
+             // Re-center the file input prompt
+            document.body.style.justifyContent = 'center';
+            document.body.style.alignItems = 'center';
+            fileInput.value = null; // Clear file input selection
+        }
+
+        /** Resets the viewer to the initial file selection state. */
+        function resetViewer() {
+            resetIntermediateState();
+            showFileInputUI();
+        }
+
+        /** Resets global state variables and clears UI elements. */
+        function resetIntermediateState() {
+            participants.clear();
+            chatPartners.clear();
+            myFriendlyNames.clear();
+            allMessages = [];
+            selectedChatPartner = null;
+
+            // Reset UI text/content
+            chatListElement.innerHTML = 'Processing...';
+            identityListElement.innerHTML = 'Processing...';
+            meInfoElement.textContent = "Click 'Set as Me' next to your name(s) to mark your messages.";
+            meInfoElement.classList.remove(HAS_IDENTITY_CLASS); // Reset style
+            messagesContentElement.innerHTML = '<div class="status-message">Processing...</div>';
+        }
+
+        // --- Utility Functions ---
+
+        /**
+         * Extracts the chat partner's name from an MSN log filename.
+         * Attempts to remove trailing digits and common separators.
+         * @param {string} filename - The log file name (e.g., "PartnerName123.xml", "Partner Name - History.xml").
+         * @returns {string} The extracted partner name or 'Unknown'.
+         */
+        function extractPartnerFromFilename(filename) {
+            if (!filename) {
+                 return UNKNOWN_VALUE;
+            }
+            // Regex: Match start of string (^), capture one or more characters reluctantly (.+?),
+            // optionally followed by digits (\d+)?
+            // optionally followed by common separators and text (?: - .*)?
+            // ending with .xml case-insensitive (\.xml$)
+            const partnerRegex = /^(.+?)(\d+)?(?: - .*)?\.xml$/i;
+            const match = filename.match(partnerRegex);
+
+            if (match && match[1]) {
+                 // Return the first captured group, trimmed
+                 return match[1].trim();
+            } else {
+                 // Fallback: remove .xml extension and trim
+                 return filename.replace(/\.xml$/i, '').trim() || UNKNOWN_VALUE;
+            }
+        }
+
+        /**
+         * Parses the 'Style' attribute from an MSN message <Text> element
+         * and converts it into a valid CSS inline style string.
+         * Includes basic validation for supported style properties.
+         * @param {string|null} styleAttr - The raw style attribute string.
+         * @returns {string} A valid CSS inline style string.
+         */
+        function parseStyleAttribute(styleAttr) {
+            if (!styleAttr) {
+                return '';
+            }
+            let styles = '';
+            // Normalize: trim whitespace, remove trailing semicolon if present
+            styleAttr = styleAttr.trim().replace(/;$/, '');
+
+            styleAttr.split(';').forEach(part => {
+                if (!part.includes(':')) {
+                    return; // Skip invalid parts
+                }
+                // Match CSS property and value
+                const match = part.match(/^\s*([a-zA-Z-]+)\s*:\s*(.+)\s*$/);
+                if (match && match.length === 3) {
+                    const cssKey = match[1].trim().toLowerCase();
+                    const cssValue = match[2].trim();
+
+                    // Whitelist and validate known/safe styles
+                    if (cssKey === 'font-family' && /^[\w\s,-]+$/.test(cssValue)) {
+                        styles += `font-family: ${cssValue}; `;
+                    } else if (cssKey === 'color' && (/^#(?:[0-9a-fA-F]{3}){1,2}$/.test(cssValue) || /^[a-zA-Z]+$/.test(cssValue))) {
+                        // Allow hex codes (#rgb, #rrggbb) and named colors
+                        styles += `color: ${cssValue}; `;
+                    } else if (cssKey === 'font-weight' && (cssValue === 'bold' || /^\d+$/.test(cssValue))) {
+                        styles += `font-weight: ${cssValue}; `;
+                    } else if (cssKey === 'font-style' && (cssValue === 'italic' || cssValue === 'oblique')) {
+                        styles += `font-style: ${cssValue}; `;
+                    } else if (cssKey === 'text-decoration' && (cssValue === 'underline' || cssValue === 'line-through')) {
+                        styles += `text-decoration: ${cssValue}; `;
+                    }
+                    // Intentionally ignore other unsupported style properties
+                }
+            });
+            return styles;
+        }
+
+        /**
+         * Finds URLs in a string and converts them into clickable HTML anchor tags.
+         * Also converts newline characters to <br> tags.
+         * @param {string} text - The input text possibly containing URLs and newlines.
+         * @returns {string} The text with URLs linkified and newlines converted to <br>.
+         */
+        function linkify(text) {
+            if (!text) return '';
+             // Pattern explanation:
+             // 1st Capturing Group: Matches common URL protocols (http, https, ftp) or www./ftp. start
+             //   followed by allowed URL characters.
+             // 2nd Capturing Group: Matches domain-like structures (e.g., domain.com) possibly followed by paths.
+            const urlPattern = /(\b(?:(?:https?|ftp):\/\/|www\.|ftp\.)[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])|(\b[A-Z0-9.-]+\.[A-Z]{2,}(?:\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*)?)/ig;
+
+            let linkifiedText = text.replace(urlPattern, function(url) {
+                let friendlyUrl = url;
+                // Prepend http:// if the URL doesn't start with a protocol but looks like a domain
+                if (!/^(?:f|ht)tps?:\/\//i.test(url)) {
+                    if (/^[A-Z0-9.-]+\.[A-Z]{2,}/i.test(url) || url.toLowerCase().startsWith('www.') || url.toLowerCase().startsWith('ftp.')) {
+                        friendlyUrl = 'http://' + url;
+                    }
+                }
+                 // Ensure proper HTML escaping for the href attribute and the visible text
+                return `<a href="${escapeHtml(friendlyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+            });
+
+            // Convert newlines to <br> tags for display in HTML
+            return linkifiedText.replace(/\n/g, '<br>');
+        }
+
+        /**
+         * Escapes HTML special characters in a string to prevent XSS vulnerabilities.
+         * @param {string} unsafe - The potentially unsafe string.
+         * @returns {string} The HTML-escaped string. Returns input if not a string.
+         */
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') {
+                return unsafe; // Return non-strings as is
+            }
+            return unsafe
+				 .replace(/&/g, "&amp;")   // Should be "&"
+				 .replace(/</g, "&lt;")    // Should be "<"
+				 .replace(/>/g, "&gt;")    // Should be ">"
+				 .replace(/"/g, "&quot;")  // Should be """
+				 .replace(/'/g, "&#039;"); // Should be "'"
+        }
+
+    </script>
+</body>
+</html>
