@@ -1048,8 +1048,8 @@
                 return `<a href="${escapeHtml(friendlyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
             });
 
-            // Convert newlines to <br> tags for display in HTML
-            return linkifiedText.replace(/\n/g, '<br>');
+            // Convert CRLF or LF newlines to <br> tags for display in HTML
+            return linkifiedText.replace(/\r?\n/g, '<br>');
         }
 
         /**
